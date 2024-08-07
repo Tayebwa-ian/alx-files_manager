@@ -1,40 +1,33 @@
 // Setting Redis server connections
 
 import { createClient } from 'redis';
+import { promisify } from 'util';
 
 class RedisClient {
   constructor() {
     this.client = createClient();
     this.client.on('error', (err) => console.log('Redis Client Error', err));
-    this.client.on('connect', () => {
-      console.log('connect to Redis server');
-    });
   }
 
   // checks connection to the redis server
   isAlive() {
-    return this.client.isReady;
+    return this.client.connected;
   }
 
   async get(key) {
-    const result = await this.client.get(key);
+    const redisGet = promisify(this.client.get).bind(this.client);
+    const result = await redisGet(key);
     return result;
   }
 
   async set(key, value, time) {
-    await this.client.set(key, value, 'EX', time, (err, reply) => {
-      if (err) {
-        console.error('Error:', err);
-      } else {
-        console.log('Reply:', reply); // should log "OK"
-      }
-
-      this.client.quit();
-    });
+    const redisSet = promisify(this.client.set).bind(this.client);
+    await redisSet(key, value, 'EX', time);
   }
 
   async del(key) {
-    await this.client.del(key);
+    const redisDel = promisify(this.client.del).bind(this.client);
+    await redisDel(key);
   }
 }
 
